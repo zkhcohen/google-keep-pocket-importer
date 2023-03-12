@@ -60,7 +60,7 @@ class Client:
             print ('Imported URL: ', note[1])
             
 
-def retrieve_notes(html):
+def parse_export(html):
     # Load the HTML file as a BeautifulSoup object
     with open(html, "r", encoding="utf8") as f:
         soup = BeautifulSoup(f, "html.parser")
@@ -75,7 +75,7 @@ def retrieve_notes(html):
 
         yield title, url
 
-if __name__ == '__main__':
+def main():
     label_name = input("Label: ")
     email = input("Email: ")
     app_password = getpass("Enter App Password or leave blank to use keyring: ")
@@ -83,7 +83,11 @@ if __name__ == '__main__':
 
     client = Client(label_name, email, app_password)
 
-    for note in retrieve_notes(html):
+    for note in parse_export(html):
         client.create_note(note[0], note[1])
 
     client.keep.sync()
+
+
+if __name__ == '__main__':
+    main()
