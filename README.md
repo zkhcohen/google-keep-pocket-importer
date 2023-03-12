@@ -1,6 +1,6 @@
 # Google Keep Pocket Import Script
 
-This is a basic script which leverages (gkeepapi)[https://github.com/kiwiz/gkeepapi] to import urls/notes from Pocket to Google Keep.
+This is a basic script which leverages [gkeepapi](https://github.com/kiwiz/gkeepapi) to import urls/notes from Pocket to Google Keep.
 
 It also tags the imported notes.
 
