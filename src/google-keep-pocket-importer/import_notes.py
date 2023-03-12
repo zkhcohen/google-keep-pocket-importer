@@ -3,70 +3,87 @@ from getpass4 import getpass
 import gkeepapi
 import keyring
 
-# Intialize Google Keep API
-keep = gkeepapi.Keep()
+class Client:
+    # def __init__(self, Inputs):
+    def __init__(self, label_name, email, app_password):
+        self.label_name = label_name
+        self.email = email
+        self.app_password = app_password
 
-# Get Google credentials and login
-email = input("Email: ")
-token = keyring.get_password('google-keep-token', email)
+        self.keep = self.__client()
+        self.label = self.__label()
 
-if token is None:
-    app_password = getpass("App Password: ")
-    success = keep.login(email, app_password)
+    def __client(self):
+        # Intialize Google Keep API
+        keep = gkeepapi.Keep()
 
-    # Set Google API Token in keyring
-    token = keep.getMasterToken()
-    keyring.set_password('google-keep-token', email, token)
-else:
-    keep.resume(email, token)
+        # Get Google credentials and login
+        if app_password:
+            login = keep.login(self.email, self.app_password)
 
-# Create Pocket label in Google Keep
-label_name = input("Label: ")
-label = keep.findLabel(label_name)
+            # Set Google API Token in keyring
+            token = keep.getMasterToken()
+            keyring.set_password('google-keep-token', self.email, token)
+        else:
+            token = keyring.get_password('google-keep-token', self.email)
+            login = keep.resume(self.email, token)
 
-if not label:
-    print ('Creating Pocket label in Google Keep...')
-    label = keep.createLabel(label_name)
+        assert login is True
+        return keep
     
-    # Sync up changes
-    keep.sync()
+    def __label(self):
+        # Create Pocket label in Google Keep
+        label = self.keep.findLabel(self.label_name)
 
-    label = keep.findLabel(label_name)
+        if not label:
+            print ('Creating label in Google Keep...')
+            label = self.keep.createLabel(self.label_name)
+            
+            # Sync up changes
+            self.keep.sync()
 
-# Define the path to the HTML file to read
-html_file = input("Path to Pocket HTML export: ")
+            label = self.keep.findLabel(self.label_name)
 
-# Load the HTML file as a BeautifulSoup object
-with open(html_file, "r", encoding="utf8") as f:
-    soup = BeautifulSoup(f, "html.parser")
+        return label
+    
+    def create_note(self, title, url):
+        # Add note if not found
+        if len(list(self.keep.find(func=lambda x : x.title == title or x.text == url))) == 0:
 
-# Find all anchor tags in the document
-anchors = soup.find_all("a")
+            # Create note
+            gnote = self.keep.createNote(title, url)
 
-# Loop through each anchor tag and extract the URL and description
-for anchor in anchors:
-    url = anchor.get("href")
-    title = anchor.text.strip()
+            # Adding Pocket label to note:
+            gnote.labels.add(self.label)
 
-    print ('Import Title: ', title)
-    print ('Import URL: ', url)
+            print ('Imported Title: ', note[0])
+            print ('Imported URL: ', note[1])
+            
 
-    # Add note if not found
-    if len(list(keep.find(query=url))) == 0:
-        gnote = keep.createNote(title, url)
+def retrieve_notes(html):
+    # Load the HTML file as a BeautifulSoup object
+    with open(html, "r", encoding="utf8") as f:
+        soup = BeautifulSoup(f, "html.parser")
 
-        # Adding Pocket label to note:
-        gnote.labels.add(label)
+    # Find all anchor tags in the document
+    anchors = soup.find_all("a")
 
-        # Sync up changes
-        keep.sync()
+    # Loop through each anchor tag and extract the URL and description
+    for anchor in anchors:
+        url = anchor.get("href")
+        title = anchor.text.strip()
 
-        # Retrieve new note
-        gnote = list(keep.find(query=url))[0]
+        yield title, url
 
-        print ('Note Title: ', gnote.title)
-        print ('Note Text: ', gnote.text)
+if __name__ == '__main__':
+    label_name = input("Label: ")
+    email = input("Email: ")
+    app_password = getpass("Enter App Password or leave blank to use keyring: ")
+    html = input("Path to Pocket HTML export: ")
 
-    else:
-        print ('Note already added!')
+    client = Client(label_name, email, app_password)
 
+    for note in retrieve_notes(html):
+        client.create_note(note[0], note[1])
+
+    client.keep.sync()
