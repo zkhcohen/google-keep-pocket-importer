@@ -19,8 +19,14 @@ It also tags the imported notes.
 pip install -e .
 ```
 
-5. Run the import.py script and follow the steps to import your notes:
+5. Run the import.py script and follow the interactive steps to import your notes, or use command line arguments:
 
+Interactive:
 ```python
 python src\gkpi\import.py
+```
+
+Command-Line Arguments (interactive for initial auth):
+```python
+python src\gkpi\import.py --email <Google Keep email> --label <name of imported items label> --path <path to Pocket export file>
 ```

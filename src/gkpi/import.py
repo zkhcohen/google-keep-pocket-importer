@@ -2,33 +2,42 @@ from bs4 import BeautifulSoup
 from getpass4 import getpass
 import gkeepapi
 import keyring
+import argparse
 
 class Client:
     # def __init__(self, Inputs):
-    def __init__(self):
-        self.label_name = input("Label: ")
-        self.email = input("Email: ")
-        self.app_password = getpass("Enter App Password or leave blank to use keyring: ")
+    def __init__(self, email, label_name):
+        self.email = email
+        self.label_name = label_name
 
-        self.keep = self.__client()
+        self.keep = self.__auth()
         self.label = self.__label()
 
-    def __client(self):
+    def __auth(self):
         # Intialize Google Keep API
         keep = gkeepapi.Keep()
 
-        # Get Google credentials and login
-        if self.app_password:
-            print('Logging in...')
-            login = keep.login(self.email, self.app_password)
+        token = keyring.get_password('google-keep-token', self.email)
 
-            # Set Google API Token in keyring
-            token = keep.getMasterToken()
-            keyring.set_password('google-keep-token', self.email, token)
+        # Get Google credentials and login
+        if token:
+            print('Authenticating with token...')
+            try:
+                login = keep.resume(self.email, token)       
+            except gkeepapi.exception.LoginException:
+                print('Invalid token')
+                keyring.delete_password('google-keep-token', self.email)
         else:
-            print('Reusing token...')
-            token = keyring.get_password('google-keep-token', self.email)
-            login = keep.resume(self.email, token)
+            print('Authenticating with app password...')
+            try: 
+                app_password = getpass("Enter App Password or leave blank to use keyring: ")
+                login = keep.login(self.email, app_password)
+
+                # Set Google API Token in keyring
+                token = keep.getMasterToken()
+                keyring.set_password('google-keep-token', self.email, token)
+            except gkeepapi.exception.LoginException as e:
+                print(e)
 
         assert login is True
         return keep
@@ -45,6 +54,12 @@ class Client:
         label = self.keep.findLabel(self.label_name)
 
         return label
+    
+    @classmethod
+    def get_user_input(self):
+        label_name = input("Label: ")
+        email = input("Email: ")
+        return self(email, label_name)
     
     def create_note(self, title, url):
         # Add note if not found
@@ -75,11 +90,26 @@ def parse_export(html):
         yield title, url
 
 def main():
+    parser = argparse.ArgumentParser(description='Get email, label and path.')
+    parser.add_argument('--email', type=str, help='Google Keep Email Address')
+    parser.add_argument('--label', type=str, help='Import Label')
+    parser.add_argument('--path', type=str, help='Pocket Export File Path')
 
-    client = Client()
+    args = parser.parse_args()
 
-    html = input("Path to Pocket HTML export: ")
+    # Get email and label via user input if necessary
+    if args.email and args.label:
+        client = Client(args.email, args.label)
+    else:
+        client = Client.get_user_input()
 
+    # Get Pocket export file path via user input if necessary
+    if args.path:
+        html = args.path
+    else:
+        html = input("Path to Pocket HTML export: ")
+
+    # Loop through exported notes and import to Google Keep
     for note in parse_export(html):
         client.create_note(note[0], note[1])
 
