@@ -5,10 +5,10 @@ import keyring
 
 class Client:
     # def __init__(self, Inputs):
-    def __init__(self, label_name, email, app_password):
-        self.label_name = label_name
-        self.email = email
-        self.app_password = app_password
+    def __init__(self):
+        self.label_name = input("Label: ")
+        self.email = input("Email: ")
+        self.app_password = getpass("Enter App Password or leave blank to use keyring: ")
 
         self.keep = self.__client()
         self.label = self.__label()
@@ -18,13 +18,15 @@ class Client:
         keep = gkeepapi.Keep()
 
         # Get Google credentials and login
-        if app_password:
+        if self.app_password:
+            print('Logging in...')
             login = keep.login(self.email, self.app_password)
 
             # Set Google API Token in keyring
             token = keep.getMasterToken()
             keyring.set_password('google-keep-token', self.email, token)
         else:
+            print('Reusing token...')
             token = keyring.get_password('google-keep-token', self.email)
             login = keep.resume(self.email, token)
 
@@ -33,16 +35,14 @@ class Client:
     
     def __label(self):
         # Create Pocket label in Google Keep
-        label = self.keep.findLabel(self.label_name)
-
-        if not label:
+        if not self.keep.findLabel(self.label_name):
             print ('Creating label in Google Keep...')
             label = self.keep.createLabel(self.label_name)
-            
+
             # Sync up changes
             self.keep.sync()
 
-            label = self.keep.findLabel(self.label_name)
+        label = self.keep.findLabel(self.label_name)
 
         return label
     
@@ -56,9 +56,8 @@ class Client:
             # Adding Pocket label to note:
             gnote.labels.add(self.label)
 
-            print ('Imported Title: ', note[0])
-            print ('Imported URL: ', note[1])
-            
+            print ('Imported Title: ', title)
+            print ('Imported URL: ', url)
 
 def parse_export(html):
     # Load the HTML file as a BeautifulSoup object
@@ -76,12 +75,10 @@ def parse_export(html):
         yield title, url
 
 def main():
-    label_name = input("Label: ")
-    email = input("Email: ")
-    app_password = getpass("Enter App Password or leave blank to use keyring: ")
-    html = input("Path to Pocket HTML export: ")
 
-    client = Client(label_name, email, app_password)
+    client = Client()
+
+    html = input("Path to Pocket HTML export: ")
 
     for note in parse_export(html):
         client.create_note(note[0], note[1])

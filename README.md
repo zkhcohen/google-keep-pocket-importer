@@ -22,5 +22,5 @@ pip install -e .
 5. Run the import.py script and follow the steps to import your notes:
 
 ```python
-python src\google-keep-pocket-importer\import_notes.py
+python src\gkpi\import.py
 ```
