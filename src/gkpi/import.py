@@ -110,8 +110,8 @@ def main():
         html = input("Path to Pocket HTML export: ")
 
     # Loop through exported notes and import to Google Keep
-    for note in parse_export(html):
-        client.create_note(note[0], note[1])
+    for pnote in parse_export(html):
+        client.create_note(pnote[0], pnote[1])
 
     client.keep.sync()
 
