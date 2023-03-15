@@ -32,6 +32,7 @@ class Client:
             try: 
                 app_password = getpass("Enter App Password or leave blank to use keyring: ")
                 login = keep.login(self.email, app_password)
+                del app_password
 
                 # Set Google API Token in keyring
                 token = keep.getMasterToken()
