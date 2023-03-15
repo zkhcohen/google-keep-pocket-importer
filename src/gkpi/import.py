@@ -90,31 +90,25 @@ def parse_export(html):
         yield title, url
 
 def main():
+    # Get CLI args
     parser = argparse.ArgumentParser(description='Get email, label and path.')
     parser.add_argument('--email', type=str, help='Google Keep Email Address')
     parser.add_argument('--label', type=str, help='Import Label')
     parser.add_argument('--path', type=str, help='Pocket Export File Path')
-
     args = parser.parse_args()
 
     # Get email and label via user input if necessary
-    if args.email and args.label:
-        client = Client(args.email, args.label)
-    else:
-        client = Client.get_user_input()
+    client = Client(args.email, args.label) if args.email and args.label else Client.get_user_input()
 
     # Get Pocket export file path via user input if necessary
-    if args.path:
-        html = args.path
-    else:
-        html = input("Path to Pocket HTML export: ")
+    html = args.path if args.path else input("Path to Pocket HTML export: ")
 
     # Loop through exported notes and import to Google Keep
     for pnote in parse_export(html):
         client.create_note(pnote[0], pnote[1])
 
+    # Sync changes to Google Keep
     client.keep.sync()
-
 
 if __name__ == '__main__':
     main()
